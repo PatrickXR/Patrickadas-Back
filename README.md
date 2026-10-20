@@ -15,6 +15,23 @@ Essas rotas exigem que a hospedagem encaminhe as requisições à aplicação.
 Um `NOT_FOUND` da própria Vercel precisa ser resolvido na publicação, além
 da implementação do endpoint.
 
+## Publicação na Vercel
+
+`vercel.json` seleciona o suporte nativo `nestjs`. A Vercel reconhece
+`src/main.ts` como entrada e empacota a aplicação como uma Vercel Function.
+Não configurar o backend como site estático nem encaminhar as requisições
+para um arquivo `dist/main.js` com o builder legado.
+
+Essa escolha foi autorizada explicitamente pelo responsável no chat em
+20/10/2026, como exceção à restrição de configuração de deploy e à previsão
+de adapter manual no ADR-001 §3. O ADR deve ser atualizado pelo time.
+
+Referência: https://vercel.com/docs/frameworks/backend/nestjs.
+Após integrar o PR e concluir o deploy, conferir `GET /health` na URL de
+produção: HTTP 200, JSON `{"status":"ok"}`. Um deploy marcado como concluído
+não substitui essa verificação HTTP. URLs de preview podem exigir login
+por causa da proteção de deployments da Vercel.
+
 ## Verificação local
 
 Instale as dependências com `npm ci`. Configure o `.env` a partir de
