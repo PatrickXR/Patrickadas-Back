@@ -1,7 +1,7 @@
 require('reflect-metadata');
 
 const { NestFactory } = require('@nestjs/core');
-const { ValidationPipe } = require('@nestjs/common');
+const { configureApplication } = require('../dist/configure-app');
 const request = require('supertest');
 
 const accounts = {
@@ -22,8 +22,7 @@ describe('Login: Supabase LOCAL real', () => {
     }
     supabaseUrl = target;
     app = await NestFactory.create(AppModule, { logger: false });
-    app.setGlobalPrefix('v1');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    configureApplication(app);
     await app.init();
   });
 

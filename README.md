@@ -2,6 +2,19 @@
 
 API NestJS do Patrickadas. O endpoint de login é `POST /v1/auth/login`.
 
+## Saúde da API
+
+`GET /health` e `GET /v1/health` são públicos e retornam HTTP 200 com
+`Content-Type: application/json` e corpo `{"status":"ok"}`. Não consultam
+Supabase, banco ou serviços externos. Indicam que a API inicializou e está
+respondendo; não verificam a disponibilidade do banco. As outras rotas
+continuam sob `/v1`. A inicialização mantém as variáveis exigidas pelos
+módulos existentes.
+
+Essas rotas exigem que a hospedagem encaminhe as requisições à aplicação.
+Um `NOT_FOUND` da própria Vercel precisa ser resolvido na publicação, além
+da implementação do endpoint.
+
 ## Verificação local
 
 Instale as dependências com `npm ci`. Configure o `.env` a partir de
