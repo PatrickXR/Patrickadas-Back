@@ -5,16 +5,30 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 @Injectable()
 export class AuthRepository {
   private readonly admin: SupabaseClient;
+  private readonly url: string;
+  private readonly serviceRoleKey: string;
 
-  constructor(private readonly config: ConfigService) {
-    this.admin = createClient(
-      this.config.getOrThrow<string>('SUPABASE_URL'),
-      this.config.getOrThrow<string>('SUPABASE_SERVICE_ROLE_KEY'),
-    );
+  constructor(config: ConfigService) {
+    this.url = config.getOrThrow<string>('SUPABASE_URL');
+    this.serviceRoleKey = config.getOrThrow<string>('SUPABASE_SERVICE_ROLE_KEY');
+    this.admin = this.createIsolatedClient();
+  }
+
+  private createIsolatedClient(): SupabaseClient {
+    return createClient(this.url, this.serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
   }
 
   async signIn(email: string, password: string) {
-    return this.admin.auth.signInWithPassword({ email, password });
+    // signIn changes the client's current session. Never share it across
+    // requests or with the privileged client used for membership lookups.
+    const client = this.createIsolatedClient();
+    return client.auth.signInWithPassword({ email, password });
   }
 
   async findMembershipRole(userId: string): Promise<string | null> {
