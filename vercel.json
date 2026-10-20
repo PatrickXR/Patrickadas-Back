@@ -1,15 +1,4 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/node",
-      "config": {
-        "installCommand": ["npm", "ci"],
-        "buildCommand": ["npm", "run", "build"],
-        "outputDirectory": "dist"
-      }
-    }
-  ],
-  "routes": [{ "src": "/(.*)", "dest": "/dist/main.js" }]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nestjs"
 }
