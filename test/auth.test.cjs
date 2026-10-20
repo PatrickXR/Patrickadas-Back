@@ -4,7 +4,7 @@ jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
 
 const { createClient } = require('@supabase/supabase-js');
 const { NestFactory } = require('@nestjs/core');
-const { ValidationPipe } = require('@nestjs/common');
+const { configureApplication } = require('../dist/configure-app');
 const request = require('supertest');
 const { AuthModule } = require('../dist/modules/auth/auth.module');
 const { AuthRepository } = require('../dist/modules/auth/auth.repository');
@@ -68,8 +68,7 @@ describe('Login: isolamento de clientes Supabase (sem banco)', () => {
       load: [() => ({ SUPABASE_URL: 'http://127.0.0.1:54321', SUPABASE_SERVICE_ROLE_KEY: 'test-only-key' })],
     }), AuthModule] })(TestAuthModule);
     app = await NestFactory.create(TestAuthModule, { logger: false });
-    app.setGlobalPrefix('v1');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    configureApplication(app);
     await app.init();
   });
 
