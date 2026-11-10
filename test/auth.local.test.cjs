@@ -47,7 +47,7 @@ describe('Login: Supabase LOCAL real', () => {
       const response = await login(role, expectedRole);
       expect(response.status).toBe(403);
       expect(response.body).toEqual({ type: 'about:blank', title: 'Papel incompativel', status: 403,
-        detail: 'Este usuario nao tem acesso por este botao.' });
+        detail: role === 'operacoes' ? 'Sua conta é de Operações. Use o botão “Entrar como Operações”.' : 'Este usuario nao tem acesso por este botao.' });
       expect(response.body).not.toHaveProperty('token');
     },
   );
