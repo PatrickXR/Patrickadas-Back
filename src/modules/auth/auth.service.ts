@@ -26,7 +26,9 @@ export class AuthService {
         type: 'about:blank',
         title: 'Papel incompativel',
         status: 403,
-        detail: 'Este usuario nao tem acesso por este botao.',
+        detail: realRole === 'operacoes' && dto.expectedRole === 'colaborador'
+          ? 'Sua conta é de Operações. Use o botão “Entrar como Operações”.'
+          : 'Este usuario nao tem acesso por este botao.',
       });
     }
 
