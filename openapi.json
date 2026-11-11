@@ -25,6 +25,85 @@
                 }
               }
             }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "description": "Segundos até a próxima janela de requisições.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            },
+            "description": ""
           }
         }
       }
@@ -1090,36 +1169,6 @@
       }
     },
     "schemas": {
-      "LoginRequestDto": {
-        "type": "object",
-        "properties": {}
-      },
-      "LoginResponseDto": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "type": "string"
-          },
-          "refreshToken": {
-            "type": "string"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "colaborador",
-              "operacoes"
-            ]
-          },
-          "userId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "token",
-          "role",
-          "userId"
-        ]
-      },
       "ProblemDetailsDto": {
         "type": "object",
         "properties": {
@@ -1148,6 +1197,58 @@
           "status"
         ]
       },
+      "LoginRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "expectedRole": {
+            "type": "string",
+            "enum": [
+              "colaborador",
+              "operacoes"
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "expectedRole"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "colaborador",
+              "operacoes"
+            ]
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "role",
+          "userId"
+        ]
+      },
       "RefreshRequestDto": {
         "type": "object",
         "properties": {
@@ -1168,6 +1269,9 @@
             "type": "number"
           },
           "available": {
+            "type": "number"
+          },
+          "maintenance": {
             "type": "number"
           },
           "nextCursor": {
@@ -1222,6 +1326,7 @@
         "required": [
           "total",
           "available",
+          "maintenance",
           "nextCursor",
           "items"
         ]

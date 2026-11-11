@@ -4,7 +4,9 @@ const { PrismaClient } = require('@prisma/client');
 const { ConfigService } = require('@nestjs/config');
 const { accessContext, createAbility } = require('../dist/modules/auth/access-context');
 const { LoansService } = require('../dist/modules/loans/loans.service');
+const { LoansRepository } = require('../dist/modules/loans/loans.repository');
 const { EquipmentService } = require('../dist/modules/equipment/equipment.service');
+const { EquipmentRepository } = require('../dist/modules/equipment/equipment.repository');
 
 jest.setTimeout(30000);
 let db;
@@ -25,8 +27,8 @@ async function scenario(check) {
     await tx.$executeRaw`insert into auth.users(id) values (${userId}::uuid),(${operatorId}::uuid)`;
     await tx.membership.createMany({ data: [{ userId, tenantId, role: 'colaborador' }, { userId: operatorId, tenantId, role: 'operacoes' }] });
     const facade = { $transaction: fn => fn(tx), loan: tx.loan };
-    const loans = new LoansService(facade, { displayName: async id => id });
-    const equipment = new EquipmentService(facade, new ConfigService());
+    const loans = new LoansService(new LoansRepository(facade, { displayName: async id => id }));
+    const equipment = new EquipmentService(new EquipmentRepository(facade, new ConfigService()));
     const as = (role, callback) => {
       const member = { userId: role === 'operacoes' ? operatorId : userId, tenantId, role };
       return accessContext.run({ ...member, ability: createAbility(member) }, callback);
@@ -42,6 +44,7 @@ test('test_ca_06_ca_07_ca_09_ca_12_emprestar_devolver_gerenciar_e_auditar', () =
   await expect(as('colaborador', () => equipment.manage({ nome:'X', patrimonio:'X', categoria:'monitor', situacao:'disponivel' })))
     .rejects.toMatchObject({ status: 403 });
   const first = await as('colaborador', () => loans.create(items[0].id));
+  expect(first.dueOn).toMatch(/^\d{4}-\d{2}-\d{2}$/); // CA-08/CA-13: OpenAPI date, sem horário.
   await expect(as('colaborador', () => loans.create(items[0].id))).rejects.toMatchObject({ status:409 });
   await as('colaborador', () => loans.create(items[1].id));
   await as('colaborador', () => loans.create(items[2].id));
@@ -63,6 +66,7 @@ test('test_ca_06_ca_07_ca_09_ca_12_emprestar_devolver_gerenciar_e_auditar', () =
   await expect(as('colaborador', () => loans.list(true))).rejects.toMatchObject({status:403});
   const ops = await as('operacoes', () => loans.list(true));
   expect(ops.every(row=>row.userId===userId)).toBe(true);
+  expect(ops.every(row=>/^\d{4}-\d{2}-\d{2}$/.test(row.dueOn))).toBe(true);
 }));
 
 test('test_ca_08_atraso_bloqueia_novo_emprestimo', () => scenario(async ({tx,loans,as,create,userId,tenantId}) => {
