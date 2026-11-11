@@ -1,15 +1,9 @@
-import { ArgumentMetadata, INestApplication, RequestMethod, ValidationPipe } from '@nestjs/common';
+import { INestApplication, RequestMethod } from '@nestjs/common';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { randomUUID } from 'node:crypto';
 import helmet from 'helmet';
 import pino from 'pino';
 import { initializeErrorReporting } from './http/error-reporting';
-
-class LegacyValidationPipe extends ValidationPipe {
-  protected toValidate(metadata: ArgumentMetadata): boolean {
-    const dto = metadata.metatype as { isZodDto?: boolean } | undefined;
-    return !dto?.isZodDto && super.toValidate(metadata);
-  }
-}
 
 export function configureApplication(app: INestApplication): void {
   initializeErrorReporting();
@@ -37,7 +31,7 @@ export function configureApplication(app: INestApplication): void {
       { path: 'v1/health', method: RequestMethod.GET },
     ],
   });
-  app.useGlobalPipes(new LegacyValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(new ZodValidationPipe());
   app.enableCors({
     origin: (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(','),
     credentials: true,
