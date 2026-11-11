@@ -75,3 +75,29 @@ test('test_ca_08_atraso_bloqueia_novo_emprestimo', () => scenario(async ({tx,loa
   await tx.loan.create({data:{tenantId,userId,equipmentId:first.id,borrowedAt:new Date('2020-01-01T12:00:00Z'),dueOn:new Date('2020-01-15T00:00:00Z')}});
   await expect(as('colaborador',()=>loans.create(second.id))).rejects.toMatchObject({code:'overdue',status:403});
 }));
+
+test('CA-006-01 CA-006-04 CA-007-01 CA-008-06 outro usuário e tenant não leem nem alteram recursos', () => scenario(async ({tx,loans,equipment,as,create,userId,tenantId}) => {
+  const item = await create(1);
+  const loan = await as('colaborador', () => loans.create(item.id));
+  const colleague = randomUUID(), outside = randomUUID();
+  await tx.$executeRaw`insert into auth.users(id) values (${colleague}::uuid)`;
+  await tx.tenant.create({data:{id:outside,slug:`isolation-${outside}`,name:'Fixture'}});
+  await tx.membership.createMany({data:[
+    {userId:colleague,tenantId,role:'colaborador'},
+    {userId,tenantId:outside,role:'operacoes'},
+  ]});
+  const run = (member, fn) => accessContext.run({...member,ability:createAbility(member)},fn);
+  const other = {userId:colleague,tenantId,role:'colaborador'};
+  expect(await run(other,()=>loans.list())).toEqual([]);
+  await expect(run(other,()=>loans.returnItem(loan.id))).rejects.toMatchObject({status:404});
+  await expect(run(other,()=>loans.list(true))).rejects.toMatchObject({status:403});
+  const foreign = {userId,tenantId:outside,role:'operacoes'};
+  expect(await run(foreign,()=>loans.list())).toEqual([]);
+  expect(await run(foreign,()=>loans.list(true))).toEqual([]);
+  await expect(run(foreign,()=>loans.returnItem(loan.id))).rejects.toMatchObject({status:404});
+  await expect(run(foreign,()=>loans.create(item.id))).rejects.toMatchObject({status:404});
+  await expect(run(foreign,()=>equipment.manage(null,item.id))).rejects.toMatchObject({status:404});
+  await expect(run(foreign,()=>equipment.manage({nome:'Invasão',patrimonio:'X',categoria:'monitor',situacao:'disponivel'},item.id))).rejects.toMatchObject({status:404});
+  expect(await tx.loan.count({where:{id:loan.id,returnedAt:null}})).toBe(1);
+  expect((await tx.equipment.findUnique({where:{id:item.id}})).nome).toBe('Monitor 1');
+}));
