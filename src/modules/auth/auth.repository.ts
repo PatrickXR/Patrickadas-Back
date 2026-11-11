@@ -31,6 +31,10 @@ export class AuthRepository {
     return client.auth.signInWithPassword({ email, password });
   }
 
+  async refresh(refreshToken: string) {
+    return this.createIsolatedClient().auth.refreshSession({ refresh_token: refreshToken });
+  }
+
   async findMembershipRole(userId: string): Promise<string | null> {
     const { data, error } = await this.admin
       .from('memberships')
@@ -40,5 +44,12 @@ export class AuthRepository {
       .maybeSingle();
     if (error) throw error;
     return (data?.role as string | undefined) ?? null;
+  }
+
+  async displayName(userId: string): Promise<string> {
+    const { data, error } = await this.admin.auth.admin.getUserById(userId);
+    if (error || !data.user) return userId;
+    const name = data.user.user_metadata?.full_name;
+    return typeof name === 'string' && name.trim() ? name : data.user.email ?? userId;
   }
 }

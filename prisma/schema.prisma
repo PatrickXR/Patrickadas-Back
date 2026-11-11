@@ -1,0 +1,120 @@
+// Migrations da Supabase CLI definem as tabelas e suas regras no Postgres.
+// RLS, CHECKs, triggers, índices parciais e a FK para auth.users ficam no SQL.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Tenant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  memberships Membership[]
+  equipment   Equipment[]
+  loans       Loan[]
+  auditEvents AuditEvent[]
+  rateLimits  RateLimitBucket[]
+
+  @@map("tenants")
+}
+
+model Membership {
+  userId    String   @map("user_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  role      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  loans       Loan[]
+  auditEvents AuditEvent[]
+  rateLimits  RateLimitBucket[]
+
+  @@id([userId, tenantId])
+  @@map("memberships")
+}
+
+model Equipment {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  patrimonio   String
+  nome         String
+  categoria    String
+  situacao     String
+  imagePath    String?   @map("image_path")
+  pixabayId    BigInt?   @map("pixabay_id")
+  imageSource  String?   @map("image_source")
+  imageAuthor  String?   @map("image_author")
+  imageLicense String?   @map("image_license")
+  observacoes  String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  loans  Loan[]
+
+  @@unique([tenantId, id], map: "equipment_tenant_id_id_key")
+  @@unique([tenantId, patrimonio])
+  @@unique([tenantId, pixabayId])
+  @@unique([tenantId, imagePath])
+  @@map("equipment")
+}
+
+model Loan {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  equipmentId String    @map("equipment_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  borrowedAt  DateTime  @default(dbgenerated("clock_timestamp()")) @map("borrowed_at") @db.Timestamptz(6)
+  dueOn       DateTime  @map("due_on") @db.Date
+  returnedAt  DateTime? @map("returned_at") @db.Timestamptz(6)
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  equipment   Equipment    @relation(fields: [tenantId, equipmentId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "loans_equipment_fk")
+  membership  Membership   @relation(fields: [userId, tenantId], references: [userId, tenantId], onDelete: Restrict, onUpdate: NoAction, map: "loans_membership_fk")
+  auditEvents AuditEvent[]
+
+  @@unique([tenantId, id], map: "loans_tenant_id_id_key")
+  @@index([tenantId, equipmentId], map: "loans_equipment_history_idx")
+  @@index([tenantId, userId, borrowedAt(sort: Desc), id], map: "loans_user_history_idx")
+  @@map("loans")
+}
+
+model AuditEvent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  loanId     String   @map("loan_id") @db.Uuid
+  action     String
+  requestId  String   @map("request_id") @db.Uuid
+  occurredAt DateTime @default(dbgenerated("clock_timestamp()")) @map("occurred_at") @db.Timestamptz(6)
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  actor  Membership @relation(fields: [actorId, tenantId], references: [userId, tenantId], onDelete: Restrict, onUpdate: NoAction, map: "audit_events_actor_fk")
+  loan   Loan       @relation(fields: [tenantId, loanId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "audit_events_loan_fk")
+
+  @@unique([tenantId, loanId, action], map: "audit_events_once_per_loan_action")
+  @@index([tenantId, actorId, occurredAt(sort: Desc)], map: "audit_events_actor_time_idx")
+  @@map("audit_events")
+}
+
+model RateLimitBucket {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope       String
+  tenantId    String?  @map("tenant_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  ipAddress   String?  @map("ip_address") @db.Inet
+  windowStart DateTime @default(dbgenerated("date_trunc('minute'::text, clock_timestamp())")) @map("window_start") @db.Timestamptz(6)
+  hitCount    BigInt   @default(1) @map("hit_count")
+
+  tenant     Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  membership Membership? @relation(fields: [userId, tenantId], references: [userId, tenantId], onDelete: Cascade, onUpdate: NoAction, map: "rate_limit_membership_fk")
+
+  @@index([windowStart], map: "rate_limit_window_cleanup_idx")
+  @@map("rate_limit_buckets")
+}

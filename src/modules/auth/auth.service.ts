@@ -1,10 +1,24 @@
 import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthRepository } from './auth.repository';
 import { LoginRequestDto, LoginResponseDto } from './dto/login.dto';
+import { JwtVerifierService } from './jwt-verifier.service';
+import { MembershipService } from './membership.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly repo: AuthRepository) {}
+  constructor(private readonly repo: AuthRepository,
+    private readonly verifier: JwtVerifierService,
+    private readonly memberships: MembershipService) {}
+
+  async refresh(refreshToken: string): Promise<LoginResponseDto> {
+    const { data, error } = await this.repo.refresh(refreshToken);
+    if (error || !data.session || !data.user) throw new UnauthorizedException('Sessão expirada');
+    const identity = await this.verifier.verify(data.session.access_token);
+    if (identity.userId !== data.user.id) throw new UnauthorizedException('Sessão inválida');
+    const membership = await this.memberships.resolve(identity);
+    return { token: data.session.access_token, refreshToken: data.session.refresh_token,
+      role: membership.role, userId: identity.userId };
+  }
 
   async login(dto: LoginRequestDto): Promise<LoginResponseDto> {
     // CA-05: credencial invalida -> erro generico (nao revela se o e-mail existe)
@@ -34,6 +48,7 @@ export class AuthService {
 
     return {
       token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
       role: realRole as 'colaborador' | 'operacoes',
       userId: data.user.id,
     };
