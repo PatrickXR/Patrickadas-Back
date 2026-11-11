@@ -136,7 +136,7 @@ describe('Login: isolamento de clientes Supabase (sem banco)', () => {
   test('test_ca_04_invalid_role_is_rejected_before_authentication', async () => {
     const response = await login('colaborador', 'admin');
     expect(response.status).toBe(400);
-    expect(response.body.statusCode).toBe(400);
+    expect(response.body.status).toBe(400);
     expect(response.body).not.toHaveProperty('token');
     expect(clients).toHaveLength(1);
   });

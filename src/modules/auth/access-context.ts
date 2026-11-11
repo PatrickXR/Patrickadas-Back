@@ -10,8 +10,11 @@ export function createAbility(membership: Membership) {
     { action: 'read', subject: 'Equipment', conditions: { tenantId } },
     { action: 'read', subject: 'Loan', conditions: { tenantId, userId } },
     { action: 'create', subject: 'Loan', conditions: { tenantId, userId } },
+    { action: 'return', subject: 'Loan', conditions: { tenantId, userId } },
     ...(role === 'operacoes'
-      ? [{ action: 'read', subject: 'Loan', conditions: { tenantId, returnedAt: null } }]
+      ? [{ action: 'read', subject: 'Loan', conditions: { tenantId, returnedAt: null } },
+        { action: 'return', subject: 'Loan', conditions: { tenantId } },
+        { action: ['create', 'update', 'delete'], subject: 'Equipment', conditions: { tenantId } }]
       : []),
   ]);
 }

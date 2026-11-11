@@ -5,6 +5,7 @@ const { randomUUID } = require('node:crypto');
 const { GenericContainer, Wait } = require('testcontainers');
 const { PrismaClient } = require('@prisma/client');
 const { LoansService } = require('../dist/modules/loans/loans.service');
+const { LoansRepository } = require('../dist/modules/loans/loans.repository');
 const { accessContext, createAbility } = require('../dist/modules/auth/access-context');
 
 const run = process.env.PATRICKADAS_TESTCONTAINERS === '1' ? test : test.skip;
@@ -50,7 +51,7 @@ run('test_ca_005_06_ca_005_12_testcontainers_migrations_concorrencia_e_limite', 
     await db.membership.create({ data: { userId, tenantId, role: 'colaborador' } });
     const member = { userId, tenantId, role: 'colaborador' };
     const asUser = callback => accessContext.run({ ...member, ability: createAbility(member) }, callback);
-    const loans = new LoansService(db, { displayName: async () => 'Fixture' });
+    const loans = new LoansService(new LoansRepository(db, { displayName: async () => 'Fixture' }));
     const items = await Promise.all([1,2,3,4].map(index => db.equipment.create({ data: {
       tenantId, nome: `Monitor ${index}`, patrimonio: `TC-${index}`, categoria: 'monitor', situacao: 'disponivel',
     } })));

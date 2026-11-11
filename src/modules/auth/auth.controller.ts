@@ -10,6 +10,7 @@ export class AuthController {
   constructor(private readonly service: AuthService) {}
 
   @Post('login')
+  @ValidatedApi()
   @HttpCode(200)
   @ApiOkResponse({ type: LoginResponseDto })
   login(@Body() dto: LoginRequestDto): Promise<LoginResponseDto> {

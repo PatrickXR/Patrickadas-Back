@@ -13,7 +13,7 @@ export class EquipmentInputDto extends createZodDto(z.object({
 export class EquipmentResultDto extends createZodDto(z.object({ id: z.string() })) {}
 
 export class CatalogResponseDto extends createZodDto(z.object({
-  total: z.number(), available: z.number(), nextCursor: z.string().nullable(),
+  total: z.number(), available: z.number(), maintenance: z.number(), nextCursor: z.string().nullable(),
   items: z.array(z.object({ id: z.string(), nome: z.string(), patrimonio: z.string(), categoria: z.string(),
     status: z.string(), isMine: z.boolean(), imageUrl: z.string().nullable(), observacoes: z.string().nullable() })),
 })) {}
