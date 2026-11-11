@@ -33,6 +33,27 @@ describe('Login: Supabase LOCAL real', () => {
       .send({ ...accounts[role], expectedRole, ...overrides });
   }
 
+  test('test_ca_009_01_refresh_rotates_session_and_checks_current_membership', async () => {
+    const initial = await login('colaborador');
+    expect(initial.status).toBe(200);
+    expect(typeof initial.body.refreshToken).toBe('string');
+    const renewed = await request(app.getHttpServer()).post('/v1/auth/refresh')
+      .send({ refreshToken: initial.body.refreshToken });
+    expect(renewed.status).toBe(200);
+    expect(renewed.body.role).toBe('colaborador');
+    expect(renewed.body.userId).toBe(initial.body.userId);
+    expect(typeof renewed.body.refreshToken).toBe('string');
+    expect(renewed.body.token.split('.')).toHaveLength(3);
+    const { JwtVerifierService } = require('../dist/modules/auth/jwt-verifier.service');
+    expect((await app.get(JwtVerifierService).verify(renewed.body.token)).userId).toBe(initial.body.userId);
+    const rejected = await request(app.getHttpServer()).post('/v1/auth/refresh').send({ refreshToken: 'invalid-fixture' });
+    expect(rejected.status).toBe(401);
+    expect(rejected.body).not.toHaveProperty('token');
+    const malformed = await request(app.getHttpServer()).post('/v1/auth/refresh').send({ refreshToken: '', role: 'operacoes' });
+    expect(malformed.status).toBe(400);
+    expect(malformed.body).not.toHaveProperty('token');
+  });
+
   test.each(['colaborador', 'operacoes'])('test_ca_02_ca_03_local_%s_receives_own_role_and_token', async (role) => {
     const response = await login(role);
     expect(response.status).toBe(200);
